@@ -1,9 +1,9 @@
 const sequelize = require('../db');
 const { DataTypes } = require('sequelize');
 
-const Image = sequelize.define('image', {
+const Comments = sequelize.define('comments', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   idUser: { type: DataTypes.INTEGER },
-  URL: { type: DataTypes.STRING, unique: true },
+  comment: { type: DataTypes.STRING },
 });
-module.exports = Image;
+module.exports = Comments;
