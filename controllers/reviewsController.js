@@ -35,16 +35,7 @@ class ReviewsController {
   }
 
   async addReview(req, res, next) {
-    const {
-      id,
-      reviewType,
-      title,
-      tags,
-      headers,
-      texts,
-      bufferImgs,
-      bufferCover,
-    } = req.body;
+    const { id, reviewType, title, tags, headers, texts, bufferImgs, bufferCover } = req.body;
     try {
       const randomString = crypto.randomBytes(5).toString('hex');
 
@@ -156,14 +147,6 @@ class ReviewsController {
           type: 'Кино',
         },
       });
-      // const updateReviews = await Review.update(
-      //   {
-      //     where: {
-      //       type: 'Кино',
-      //     },
-      //   },
-      //   { likes: 0, idComments: -1 },
-      // );
       res.json({ data: reviews });
     } catch (error) {
       res.json(error);

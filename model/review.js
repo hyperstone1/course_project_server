@@ -12,6 +12,5 @@ const Review = sequelize.define('reviews', {
   headers: { type: DataTypes.ARRAY(DataTypes.STRING) },
   tags: { type: DataTypes.ARRAY(DataTypes.STRING) },
   likes: { type: DataTypes.INTEGER },
-  idComments: {type: DataTypes.ARRAY(DataTypes.INTEGER)}
 });
 module.exports = Review;

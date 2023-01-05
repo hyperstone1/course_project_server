@@ -1,10 +1,9 @@
 const sequelize = require('../db');
 const { DataTypes } = require('sequelize');
 
-const Comments = sequelize.define('comments', {
+const Likes = sequelize.define('likes', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   idUser: { type: DataTypes.INTEGER },
-  idReview : { type: DataTypes.INTEGER },
-  comment: { type: DataTypes.TEXT },
+  idReview: { type: DataTypes.STRING },
 });
-module.exports = Comments;
+module.exports = Likes;
