@@ -90,7 +90,12 @@ const fetchImages = async (bufferImgs) => {
                 requested_visibility: 'public',
               },
             },
-          }).then((res) => imgsId.push(res.data.url.substring(0, res.data.url.length - 1) + 1));
+          }).then((res) =>
+            imgsId.push({
+              id: item.id,
+              image: res.data.url.substring(0, res.data.url.length - 1) + 1,
+            }),
+          );
         });
       }),
     ).then(() => {

@@ -35,14 +35,16 @@ class ReviewsController {
   }
 
   async addReview(req, res, next) {
-    const { id, reviewType, title, tags, headers, texts, bufferImgs, bufferCover } = req.body;
+    const { id, name, reviewType, title, tags, headers, texts, rating, bufferImgs, bufferCover } =
+      req.body;
     try {
       const randomString = crypto.randomBytes(5).toString('hex');
-
       const stream = fs.createWriteStream(`./public/images/${randomString}.jpg`);
       if (bufferCover) {
-        const image = Buffer.from(bufferCover);
-        console.log(image);
+        const image = Buffer.from(Object.values(bufferCover));
+        console.log(rating);
+
+        // console.log(image);
 
         stream.on('finish', async function () {
           console.log('file has been written');
@@ -59,7 +61,8 @@ class ReviewsController {
           );
           console.log('images array: ', imgsUrl);
           await Review.create({
-            idUser: id,
+            idUser: Number(id),
+            userName: name,
             type: reviewType,
             title,
             tags,
@@ -68,19 +71,19 @@ class ReviewsController {
             coverURL: urlCover,
             imagesURL: imgsUrl,
             likes: 0,
-            idComments: [0],
+            rating,
           });
           if (tags) {
-            tags.map(async (tag) => {
-              await Tags.create({
-                tag,
+            tags.map((tag) => {
+              Tags.create({
+                tag: tag,
               });
             });
           }
           res.end('file has been written');
         });
       }
-      stream.write(Buffer.from(bufferCover), 'utf-8', function (err) {
+      stream.write(Buffer.from(JSON.stringify(bufferCover)), 'utf-8', function (err) {
         stream.end();
       });
       res.json('ok');
@@ -136,7 +139,7 @@ class ReviewsController {
     } catch (error) {
       console.log(error);
 
-      res.json(error);
+      res.json(400, error);
     }
   }
 
@@ -153,10 +156,113 @@ class ReviewsController {
     }
   }
 
+  async getGames(req, res) {
+    try {
+      const reviews = await Review.findAll({
+        where: {
+          type: 'Игры',
+        },
+      });
+      res.json({ data: reviews });
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async getBooks(req, res) {
+    try {
+      const reviews = await Review.findAll({
+        where: {
+          type: 'Книги',
+        },
+      });
+      res.json({ data: reviews });
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async getMusic(req, res) {
+    try {
+      const reviews = await Review.findAll({
+        where: {
+          type: 'Музыка',
+        },
+      });
+      res.json({ data: reviews });
+    } catch (error) {
+      res.json(error);
+    }
+  }
+  async getAllReviews(req, res) {
+    try {
+      const reviews = await Review.findAll();
+      res.json(reviews);
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async getReviewById(req, res) {
+    const { reviewId } = req.body;
+    const reviewsContent = [];
+    try {
+      const reviews = await Review.findAll({
+        where: {
+          id: Number(reviewId),
+        },
+      });
+      const text = await reviews[0].text.map((item) => JSON.parse(item));
+      const headers = await reviews[0].headers.map((item) => JSON.parse(item));
+      const imagesURL = await reviews[0].imagesURL.map((item) => JSON.parse(item));
+      await text.map((item) => {
+        if (item.text) {
+          reviewsContent.push({ id: item.id, text: item.text, type: 'text' });
+        }
+      });
+      await headers.map((item) => {
+        if (item.header) {
+          reviewsContent.push({ id: item.id, header: item.header, type: 'header' });
+        }
+      });
+      await imagesURL.map((item) => {
+        if (item.image) {
+          reviewsContent.push({ id: item.id, url: item.image, type: 'image' });
+        }
+      });
+      reviewsContent.sort(function (a, b) {
+        if (a.id > b.id) {
+          return 1;
+        }
+        if (a.id < b.id) {
+          return -1;
+        }
+        return 0;
+      });
+      res.json({ data: reviews, text, headers, imagesURL, reviewsContent });
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async getReviewsByUser(req, res) {
+    const { id } = req.body;
+    try {
+      const reviews = await Review.findAll({
+        where: {
+          idUser: id,
+        },
+      });
+      res.json(reviews);
+    } catch (error) {
+      res.json({ message: error.message });
+    }
+  }
+
   async getTags(req, res) {
     try {
       const tags = await Tags.findAll();
-      res.json([{ title: 'clock' }, { title: 'alert' }, { title: 'login' }]);
+      res.json(tags);
     } catch (error) {
       res.json({ message: error.message });
     }
