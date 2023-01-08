@@ -5,6 +5,10 @@ const axios = require('axios');
 const crypto = require('crypto');
 const fs = require('fs');
 const { fetchCoverImg, fetchImages } = require('../http/reviews/createReview');
+const Likes = require('../model/likes');
+const Rating = require('../model/rating');
+const User = require('../model/user')
+// const { validation } = require('../utils/validation');
 
 class ReviewsController {
   async getImages(req, res) {
@@ -74,10 +78,13 @@ class ReviewsController {
             rating,
           });
           if (tags) {
+            const allTags = await Tags.findAll();
             tags.map((tag) => {
-              Tags.create({
-                tag: tag,
-              });
+              if (!allTags.includes(tag)) {
+                Tags.create({
+                  tag: tag,
+                });
+              }
             });
           }
           res.end('file has been written');
@@ -194,6 +201,7 @@ class ReviewsController {
       res.json(error);
     }
   }
+
   async getAllReviews(req, res) {
     try {
       const reviews = await Review.findAll();
@@ -253,7 +261,7 @@ class ReviewsController {
           idUser: id,
         },
       });
-      res.json(reviews);
+      res.json({ reviews });
     } catch (error) {
       res.json({ message: error.message });
     }
@@ -265,6 +273,150 @@ class ReviewsController {
       res.json(tags);
     } catch (error) {
       res.json({ message: error.message });
+    }
+  }
+
+  async updateReview(req, res) {
+    const review = { coverURL: '', imagesURL: [] };
+    const {
+      reviewId,
+      reviewType,
+      title,
+      tags,
+      headers,
+      texts,
+      rating,
+      bufferImgs,
+      bufferCover,
+      imagesTool,
+      previewCover,
+    } = req.body;
+    try {
+      const newUrlCover = null;
+      const imagesURL = [];
+      const images = [];
+      review.coverURL = previewCover;
+
+      const reviewById = await Review.findAll({
+        where: {
+          id: reviewId,
+        },
+      });
+      console.log('review:  ', reviewById[0].dataValues.id);
+      reviewById[0].dataValues.imagesURL.map((item) => {
+        images.push(JSON.parse(item));
+        console.log('reviewById: ', reviewById);
+      });
+      if (previewCover === reviewById[0].coverURL) {
+        review.coverURL = previewCover;
+        console.log('previewCover: ', previewCover);
+      } else {
+        if (bufferCover) {
+          const image = Buffer.from(Object.values(bufferCover));
+          newUrlCover = await fetchCoverImg(image);
+          // const imgsUrl = null;
+          console.log('url cover image: ', newUrlCover);
+        }
+      }
+      await imagesTool.map((image) => {
+        if (image.url.substring(0, 5) === 'https') {
+          console.log('image.url 1: ', image.url);
+          review.imagesURL.push({ id: image.id, image: image.url });
+        }
+      });
+
+      console.log('images: ', images);
+
+      console.log('imagesURL: ', imagesURL);
+      console.log('review.imagesURL: ', review.imagesURL);
+      console.log('bufferImgs.length: ', bufferImgs.length);
+      if (bufferImgs.length > 0) {
+        const newImgsUrl = await fetchImages(bufferImgs);
+        console.log('images array: ', newImgsUrl);
+        newImgsUrl.map((image) => {
+          review.imagesURL.push(image);
+        });
+      }
+      console.log('review.imagesURL: ', review.imagesURL);
+
+      const newReview = await Review.update(
+        {
+          type: reviewType,
+          title,
+          tags,
+          headers,
+          text: texts,
+          coverURL: review.coverURL,
+          imagesURL: review.imagesURL,
+          likes: 0,
+          rating,
+        },
+        {
+          where: { id: reviewId },
+        },
+      );
+      console.log('reviewId: ', newReview);
+
+      if (tags) {
+        const allTags = await Tags.findAll();
+        tags.map((tag) => {
+          if (!allTags.includes(tag)) {
+            Tags.create({
+              tag: tag,
+            });
+          }
+        });
+      }
+      console.log('newReview!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: ', newReview);
+      res.json({ data: newReview });
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async getLikesByReview(req, res) {
+    const { id } = req.body;
+    try {
+      const reviewLikes = await Likes.findAll({ where: { idReview: id } });
+
+      res.json(reviewLikes);
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async rateReviewByUser(req, res) {
+    const { reviewId, userId, rating } = req.body;
+    try {
+      const reviewAuthor = await Review.findOne({ where: { id: reviewId } });
+      const reviewRating = await Rating.findAll({ where: { idReview: reviewId, idUser: userId } });
+      if (reviewRating.length > 0) {
+        await Rating.update({ rating }, { where: { idReview: reviewId, idUser: userId } });
+        console.log('reviewAuthor TUT: ', reviewAuthor.dataValues.idUser);
+        const ratingAuthor = await Rating.findAll({where: {id:reviewAuthor.dataValues.idUser}})
+        await User.update({rating: },{where: {id: reviewAuthor.dataValues.idUser}})
+        res.json('successfully updated');
+      } else {
+        await Rating.create({ idUser: userId, idReview: reviewId, rating });
+        req.json('Successfuly added');
+      }
+    } catch (error) {
+      res.json(error);
+    }
+  }
+  async reviewRatingByUser(req, res) {
+    const { reviewId, userId } = req.body;
+    try {
+      const reviewRating = await Rating.findAll({ where: { idReview: reviewId, idUser: userId } });
+      console.log(reviewRating.length);
+      if (reviewRating.length > 0) {
+        console.log(reviewRating[0]);
+        res.json(reviewRating[0].dataValues.rating);
+      } else {
+        res.json('not rated');
+      }
+    } catch (error) {
+      res.json(error);
     }
   }
 }

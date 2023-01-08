@@ -2,6 +2,8 @@ const ApiError = require('../error/ApiError');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../model/user');
+const Likes = require('../model/likes');
+const Review = require('../model/review');
 
 const generateJwt = (id, email, name) => {
   return jwt.sign({ id, email, name }, process.env.SECRET_KEY, { expiresIn: '24h' });
@@ -53,6 +55,54 @@ class UserController {
       res.json(usersTable);
     } catch (error) {
       res.json({ message: error.message });
+    }
+  }
+  async likeReview(req, res) {
+    const { id, idUser } = req.body;
+    try {
+      if (idUser) {
+        console.log(id, idUser);
+        const likeReviewExist = await Likes.findAll({ where: { idReview: id, idUser: idUser } });
+        if (likeReviewExist.length > 0) {
+          const unlike = await Likes.destroy({ where: { id: likeReviewExist[0].dataValues.id } });
+          const allLikesReview = await Likes.findAll({ where: { idReview: id } });
+          const review = await Review.update(
+            { likes: allLikesReview.length },
+            { where: { id: id } },
+          );
+
+          console.log('likes count: ', review.length);
+          res.json(allLikesReview.length);
+        } else {
+          const reviewLike = await Likes.create({ idReview: id, idUser: idUser });
+          const allLikesReview = await Likes.findAll({ where: { idReview: id } });
+          const review = await Review.update(
+            { likes: allLikesReview.length },
+            { where: { id: id } },
+          );
+          res.json(allLikesReview.length);
+        }
+      } else {
+        res.json({ message: 'Only registered users can like the review' });
+      }
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async likesByUser(req, res) {
+    const { userId } = req.body;
+    console.log('req.body: ', req.body);
+    try {
+      if (userId !== '') {
+        const likesByUser = await Likes.findAll({ where: { idUser: userId } });
+        console.log('likesByUser: ', likesByUser);
+        res.json(likesByUser);
+      } else {
+        res.json('Войдите в аккаунт');
+      }
+    } catch (error) {
+      res.json(error);
     }
   }
 }

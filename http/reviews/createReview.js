@@ -99,6 +99,7 @@ const fetchImages = async (bufferImgs) => {
         });
       }),
     ).then(() => {
+      console.log('imgsId from DropBox: ', imgsId);
       return imgsId;
     });
     return imgsId;
