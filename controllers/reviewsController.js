@@ -7,7 +7,8 @@ const fs = require('fs');
 const { fetchCoverImg, fetchImages } = require('../http/reviews/createReview');
 const Likes = require('../model/likes');
 const Rating = require('../model/rating');
-const User = require('../model/user')
+const User = require('../model/user');
+const { counterRating } = require('../utils/counterRating');
 // const { validation } = require('../utils/validation');
 
 class ReviewsController {
@@ -79,13 +80,15 @@ class ReviewsController {
           });
           if (tags) {
             const allTags = await Tags.findAll();
-            tags.map((tag) => {
-              if (!allTags.includes(tag)) {
-                Tags.create({
-                  tag: tag,
-                });
-              }
-            });
+            console.log(allTags);
+            await Promise.all(
+              tags.map(async (tag) => {
+                const tagExist = await Tags.findOne({ where: { tag } });
+                if (!tagExist) {
+                  await Tags.create({ tag: tag });
+                }
+              }),
+            );
           }
           res.end('file has been written');
         });
@@ -359,13 +362,15 @@ class ReviewsController {
 
       if (tags) {
         const allTags = await Tags.findAll();
-        tags.map((tag) => {
-          if (!allTags.includes(tag)) {
-            Tags.create({
-              tag: tag,
-            });
-          }
-        });
+        console.log(allTags);
+        await Promise.all(
+          tags.map(async (tag) => {
+            const tagExist = await Tags.findOne({ where: { tag } });
+            if (!tagExist) {
+              await Tags.create({ tag: tag });
+            }
+          }),
+        );
       }
       console.log('newReview!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: ', newReview);
       res.json({ data: newReview });
@@ -388,13 +393,27 @@ class ReviewsController {
   async rateReviewByUser(req, res) {
     const { reviewId, userId, rating } = req.body;
     try {
-      const reviewAuthor = await Review.findOne({ where: { id: reviewId } });
       const reviewRating = await Rating.findAll({ where: { idReview: reviewId, idUser: userId } });
+      const authorReview = await Review.findOne({ where: { id: reviewId } });
+
       if (reviewRating.length > 0) {
+        const ratingAuthorByUsers = [];
         await Rating.update({ rating }, { where: { idReview: reviewId, idUser: userId } });
-        console.log('reviewAuthor TUT: ', reviewAuthor.dataValues.idUser);
-        const ratingAuthor = await Rating.findAll({where: {id:reviewAuthor.dataValues.idUser}})
-        await User.update({rating: },{where: {id: reviewAuthor.dataValues.idUser}})
+        const idReviewsAuthor = [];
+
+        const reviewsAuthor = await Review.findAll({
+          where: { idUser: authorReview.dataValues.idUser },
+        });
+        reviewsAuthor.map((item) => {
+          idReviewsAuthor.push(item.dataValues.id);
+        });
+        const ratingAuthor = await counterRating(idReviewsAuthor);
+        console.log('ratingAuthor: ', ratingAuthor);
+        const user = await User.update(
+          { rating: ratingAuthor },
+          { where: { id: authorReview.dataValues.idUser } },
+        );
+        console.log(user);
         res.json('successfully updated');
       } else {
         await Rating.create({ idUser: userId, idReview: reviewId, rating });
