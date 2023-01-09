@@ -42,8 +42,6 @@ class ReviewsController {
     const { id, name, reviewType, title, tags, headers, texts, rating, bufferImgs, bufferCover } =
       req.body;
     try {
-      const randomString = crypto.randomBytes(5).toString('hex');
-      const stream = fs.createWriteStream(`./public/images/${randomString}.jpg`);
       if (bufferCover) {
         const image = Buffer.from(Object.values(bufferCover));
 
@@ -82,12 +80,8 @@ class ReviewsController {
               }),
             );
           }
-          res.end('file has been written');
         });
       }
-      stream.write(Buffer.from(JSON.stringify(bufferCover)), 'utf-8', function (err) {
-        stream.end();
-      });
       res.json('ok');
     } catch (error) {
       res.json(error);
