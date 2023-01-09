@@ -17,6 +17,9 @@ router.post('/create', reviewsController.addReview);
 router.post('/update_review', reviewsController.updateReview);
 router.post('/rating_review', reviewsController.rateReviewByUser);
 router.post('/rating_by_user', reviewsController.reviewRatingByUser);
+router.post('/search', reviewsController.findMatches);
+router.post('/send_comment', reviewsController.sendComment);
+router.post('/comments', reviewsController.getComments);
 
 
 module.exports = router;

@@ -3,6 +3,7 @@ const router = new Router();
 const userController = require('../controllers/userController');
 
 router.get('/users', userController.allUsers);
+router.post('/user', userController.getUser);
 router.post('/user_likes', userController.likesByUser);
 router.post('/registration', userController.registration);
 router.post('/login', userController.login);

@@ -9,7 +9,7 @@ const Likes = require('../model/likes');
 const Rating = require('../model/rating');
 const User = require('../model/user');
 const { counterRating } = require('../utils/counterRating');
-// const { validation } = require('../utils/validation');
+const Comments = require('../model/comments');
 
 class ReviewsController {
   async getImages(req, res) {
@@ -32,7 +32,6 @@ class ReviewsController {
         },
       }).then((resp) => {
         res.send(resp.data);
-        console.log(resp);
       });
     } catch (error) {
       res.json({ message: error.message });
@@ -47,14 +46,9 @@ class ReviewsController {
       const stream = fs.createWriteStream(`./public/images/${randomString}.jpg`);
       if (bufferCover) {
         const image = Buffer.from(Object.values(bufferCover));
-        console.log(rating);
-
-        // console.log(image);
 
         stream.on('finish', async function () {
-          console.log('file has been written');
           const urlCover = await fetchCoverImg(image);
-          console.log('url cover image: ', urlCover);
           const imgsUrl = await fetchImages(
             bufferImgs,
             urlCover,
@@ -64,7 +58,6 @@ class ReviewsController {
             headers,
             texts,
           );
-          console.log('images array: ', imgsUrl);
           await Review.create({
             idUser: Number(id),
             userName: name,
@@ -80,7 +73,6 @@ class ReviewsController {
           });
           if (tags) {
             const allTags = await Tags.findAll();
-            console.log(allTags);
             await Promise.all(
               tags.map(async (tag) => {
                 const tagExist = await Tags.findOne({ where: { tag } });
@@ -98,7 +90,6 @@ class ReviewsController {
       });
       res.json('ok');
     } catch (error) {
-      console.log(error);
       res.json(error);
     }
   }
@@ -112,7 +103,6 @@ class ReviewsController {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.TOKEN}`,
-          // 'Dropbox-API-Arg': JSON.stringify({ path: '/Upload/966c17a8f9.jpg' }),
         },
         data: {
           path: '/Upload/966c17a8f9.jpg',
@@ -123,21 +113,7 @@ class ReviewsController {
             requested_visibility: 'public',
           },
         },
-
-        // responseType: 'blob',
-
-        // data: {
-        //   entries: [
-        //     {
-        //       format: 'jpeg',
-        //       mode: 'strict',
-        //       path: '/Upload/966c17a8f9.jpg',
-        //       size: 'w64h64',
-        //     },
-        //   ],
-        // },
       }).then((resp) => {
-        console.log(resp.data);
         res.send(resp.data);
       });
       const coverImage = Review.findAll({
@@ -147,8 +123,6 @@ class ReviewsController {
       });
       res.send(coverImage);
     } catch (error) {
-      console.log(error);
-
       res.json(400, error);
     }
   }
@@ -157,7 +131,7 @@ class ReviewsController {
     try {
       const reviews = await Review.findAll({
         where: {
-          type: 'Кино',
+          type: 'Movies',
         },
       });
       res.json({ data: reviews });
@@ -170,7 +144,7 @@ class ReviewsController {
     try {
       const reviews = await Review.findAll({
         where: {
-          type: 'Игры',
+          type: 'Games',
         },
       });
       res.json({ data: reviews });
@@ -183,7 +157,7 @@ class ReviewsController {
     try {
       const reviews = await Review.findAll({
         where: {
-          type: 'Книги',
+          type: 'Books',
         },
       });
       res.json({ data: reviews });
@@ -196,7 +170,7 @@ class ReviewsController {
     try {
       const reviews = await Review.findAll({
         where: {
-          type: 'Музыка',
+          type: 'Music',
         },
       });
       res.json({ data: reviews });
@@ -288,7 +262,7 @@ class ReviewsController {
       tags,
       headers,
       texts,
-      rating,
+      existRating,
       bufferImgs,
       bufferCover,
       imagesTool,
@@ -305,43 +279,28 @@ class ReviewsController {
           id: reviewId,
         },
       });
-      console.log('review:  ', reviewById[0].dataValues.id);
       reviewById[0].dataValues.imagesURL.map((item) => {
         images.push(JSON.parse(item));
-        console.log('reviewById: ', reviewById);
       });
       if (previewCover === reviewById[0].coverURL) {
         review.coverURL = previewCover;
-        console.log('previewCover: ', previewCover);
       } else {
         if (bufferCover) {
           const image = Buffer.from(Object.values(bufferCover));
           newUrlCover = await fetchCoverImg(image);
-          // const imgsUrl = null;
-          console.log('url cover image: ', newUrlCover);
         }
       }
       await imagesTool.map((image) => {
         if (image.url.substring(0, 5) === 'https') {
-          console.log('image.url 1: ', image.url);
           review.imagesURL.push({ id: image.id, image: image.url });
         }
       });
-
-      console.log('images: ', images);
-
-      console.log('imagesURL: ', imagesURL);
-      console.log('review.imagesURL: ', review.imagesURL);
-      console.log('bufferImgs.length: ', bufferImgs.length);
       if (bufferImgs.length > 0) {
         const newImgsUrl = await fetchImages(bufferImgs);
-        console.log('images array: ', newImgsUrl);
         newImgsUrl.map((image) => {
           review.imagesURL.push(image);
         });
       }
-      console.log('review.imagesURL: ', review.imagesURL);
-
       const newReview = await Review.update(
         {
           type: reviewType,
@@ -352,17 +311,14 @@ class ReviewsController {
           coverURL: review.coverURL,
           imagesURL: review.imagesURL,
           likes: 0,
-          rating,
+          rating: existRating,
         },
         {
           where: { id: reviewId },
         },
       );
-      console.log('reviewId: ', newReview);
-
       if (tags) {
         const allTags = await Tags.findAll();
-        console.log(allTags);
         await Promise.all(
           tags.map(async (tag) => {
             const tagExist = await Tags.findOne({ where: { tag } });
@@ -372,7 +328,6 @@ class ReviewsController {
           }),
         );
       }
-      console.log('newReview!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: ', newReview);
       res.json({ data: newReview });
     } catch (error) {
       res.json(error);
@@ -397,10 +352,8 @@ class ReviewsController {
       const authorReview = await Review.findOne({ where: { id: reviewId } });
 
       if (reviewRating.length > 0) {
-        const ratingAuthorByUsers = [];
-        await Rating.update({ rating }, { where: { idReview: reviewId, idUser: userId } });
         const idReviewsAuthor = [];
-
+        await Rating.update({ rating }, { where: { idReview: reviewId, idUser: userId } });
         const reviewsAuthor = await Review.findAll({
           where: { idUser: authorReview.dataValues.idUser },
         });
@@ -408,32 +361,93 @@ class ReviewsController {
           idReviewsAuthor.push(item.dataValues.id);
         });
         const ratingAuthor = await counterRating(idReviewsAuthor);
-        console.log('ratingAuthor: ', ratingAuthor);
         const user = await User.update(
           { rating: ratingAuthor },
           { where: { id: authorReview.dataValues.idUser } },
         );
-        console.log(user);
         res.json('successfully updated');
       } else {
+        const idReviewsAuthor = [];
         await Rating.create({ idUser: userId, idReview: reviewId, rating });
+        const reviewsAuthor = await Review.findAll({
+          where: { idUser: authorReview.dataValues.idUser },
+        });
+        reviewsAuthor.map((item) => {
+          idReviewsAuthor.push(item.dataValues.id);
+        });
+        const ratingAuthor = await counterRating(idReviewsAuthor);
+        const user = await User.update(
+          { rating: ratingAuthor },
+          { where: { id: authorReview.dataValues.idUser } },
+        );
         req.json('Successfuly added');
       }
     } catch (error) {
       res.json(error);
     }
   }
+
   async reviewRatingByUser(req, res) {
     const { reviewId, userId } = req.body;
     try {
       const reviewRating = await Rating.findAll({ where: { idReview: reviewId, idUser: userId } });
-      console.log(reviewRating.length);
       if (reviewRating.length > 0) {
-        console.log(reviewRating[0]);
         res.json(reviewRating[0].dataValues.rating);
       } else {
         res.json('not rated');
       }
+    } catch (error) {
+      res.json(error);
+    }
+  }
+
+  async findMatches(req, res) {
+    const { sentence } = req.body;
+    try {
+      const matchesSentence = [];
+      const allReviews = await Review.findAll();
+      allReviews.map((item) => {
+        if (item.dataValues.title.toLowerCase().includes(sentence)) {
+          matchesSentence.push({ id: item.dataValues.id, result: item.dataValues.title });
+        }
+        item.dataValues.text.map((obj) => {
+          if (JSON.parse(obj).text.includes(sentence)) {
+            matchesSentence.push({ id: item.dataValues.id, result: JSON.parse(obj).text });
+          }
+        });
+        if (item.dataValues.headers.length > 0) {
+          item.dataValues.headers.map((obj) => {
+            if (JSON.parse(obj).header.includes(sentence)) {
+              matchesSentence.push({ id: item.dataValues.id, result: JSON.parse(obj).text });
+            }
+          });
+        }
+      }),
+        res.json(matchesSentence);
+    } catch (error) {
+      res.json(error);
+    }
+  }
+  async getComments(req, res) {
+    const { idReview } = req.body;
+    try {
+      const comments = await Comments.findAll({ where: { idReview } });
+
+      res.json(comments);
+    } catch (error) {
+      res.json(error);
+    }
+  }
+  async sendComment(req, res) {
+    const { reviewId, userId, name, comment } = req.body;
+    try {
+      const comments = await Comments.create({
+        idReview: Number(reviewId),
+        idUser: userId,
+        username: name,
+        comment,
+      });
+      res.json(comments);
     } catch (error) {
       res.json(error);
     }

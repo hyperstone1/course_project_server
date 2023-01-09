@@ -106,6 +106,15 @@ class UserController {
       res.json(error);
     }
   }
+  async getUser(req, res) {
+    const {idUser} = req.body;
+    try {
+      const user = await User.findAll({where:{id: idUser}});
+      res.json(user);
+    } catch (error) {
+      res.json({ message: error.message });
+    }
+  }
 }
 
 module.exports = new UserController();
