@@ -9,6 +9,8 @@ router.get('/books', reviewsController.getBooks);
 router.get('/music', reviewsController.getMusic);
 router.get('/tags', reviewsController.getTags);
 router.get('/likes_by_review', reviewsController.getLikesByReview);
+router.get('/best', reviewsController.getBestReviews);
+router.post('/reviews_by_tag', reviewsController.getReviewsByTag);
 
 router.post('/user_reviews', reviewsController.getReviewsByUser);
 router.post('/id', reviewsController.getReviewById);
@@ -20,6 +22,5 @@ router.post('/rating_by_user', reviewsController.reviewRatingByUser);
 router.post('/search', reviewsController.findMatches);
 router.post('/send_comment', reviewsController.sendComment);
 router.post('/comments', reviewsController.getComments);
-
 
 module.exports = router;

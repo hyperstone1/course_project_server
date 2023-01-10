@@ -39,48 +39,62 @@ class ReviewsController {
   }
 
   async addReview(req, res, next) {
+    console.log('zdarova');
     const { id, name, reviewType, title, tags, headers, texts, rating, bufferImgs, bufferCover } =
       req.body;
+    console.log(
+      'id, name, reviewType, title, tags, headers, texts, rating, bufferImgs, bufferCover: ',
+      id,
+      name,
+      reviewType,
+      title,
+      tags,
+      headers,
+      texts,
+      rating,
+      bufferImgs,
+      bufferCover,
+    );
     try {
       if (bufferCover) {
         const image = Buffer.from(Object.values(bufferCover));
 
-        stream.on('finish', async function () {
-          const urlCover = await fetchCoverImg(image);
-          const imgsUrl = await fetchImages(
-            bufferImgs,
-            urlCover,
-            reviewType,
-            title,
-            tags,
-            headers,
-            texts,
-          );
-          await Review.create({
-            idUser: Number(id),
-            userName: name,
-            type: reviewType,
-            title,
-            tags,
-            headers,
-            text: texts,
-            coverURL: urlCover,
-            imagesURL: imgsUrl,
-            likes: 0,
-            rating,
-          });
-          if (tags) {
-            const allTags = await Tags.findAll();
-            await Promise.all(
-              tags.map(async (tag) => {
-                const tagExist = await Tags.findOne({ where: { tag } });
-                if (!tagExist) {
-                  await Tags.create({ tag: tag });
-                }
-              }),
-            );
-          }
+        const urlCover = await fetchCoverImg(image);
+        const imgsUrl = await fetchImages(
+          bufferImgs,
+          urlCover,
+          reviewType,
+          title,
+          tags,
+          headers,
+          texts,
+        );
+
+        const review = await Review.create({
+          idUser: Number(id),
+          userName: name,
+          type: reviewType,
+          title,
+          tags,
+          headers,
+          text: texts,
+          coverURL: urlCover,
+          imagesURL: imgsUrl,
+          likes: 0,
+          rating,
         });
+        if (tags) {
+          const allTags = await Tags.findAll();
+          await Promise.all(
+            tags.map(async (tag) => {
+              const tagExist = await Tags.findOne({ where: { tag } });
+              if (!tagExist) {
+                await Tags.create({ tag: tag });
+              }
+            }),
+          );
+        }
+        console.log(error);
       }
       res.json('ok');
     } catch (error) {
@@ -118,6 +132,35 @@ class ReviewsController {
       res.send(coverImage);
     } catch (error) {
       res.json(400, error);
+    }
+  }
+
+  async getBestReviews(req, res) {
+    try {
+      const reviews = await Review.findAll({
+        limit: 3,
+        order: [['rating', 'DESC']],
+      });
+      res.json(reviews);
+    } catch (error) {
+      res.json(error);
+    }
+  }
+  async getReviewsByTag(req, res) {
+    const { tag } = req.body;
+    const tagReviews = [];
+    try {
+      const reviews = await Review.findAll();
+      reviews.map((review) => {
+        console.log(review.dataValues.tags);
+        if (review.dataValues.tags.includes(tag)) {
+          tagReviews.push(review);
+          console.log('tagReviews: ', tagReviews);
+        }
+      });
+      res.json(tagReviews);
+    } catch (error) {
+      res.json(error);
     }
   }
 
