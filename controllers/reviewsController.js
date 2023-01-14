@@ -10,34 +10,9 @@ const Rating = require('../model/rating');
 const User = require('../model/user');
 const { counterRating } = require('../utils/counterRating');
 const Comments = require('../model/comments');
+const { dbx } = require('../dropbox/dropbox');
 
 class ReviewsController {
-  async getImages(req, res) {
-    try {
-      await axios({
-        method: 'POST',
-        url: `https://api.dropboxapi.com/2/files/list_folder`,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.TOKEN}`,
-        },
-        data: {
-          include_deleted: false,
-          include_has_explicit_shared_members: false,
-          include_media_info: false,
-          include_mounted_folders: true,
-          include_non_downloadable_files: true,
-          path: '/Upload',
-          recursive: false,
-        },
-      }).then((resp) => {
-        res.send(resp.data);
-      });
-    } catch (error) {
-      res.json({ message: error.message });
-    }
-  }
-
   async addReview(req, res, next) {
     console.log('zdarova');
     const { id, name, reviewType, title, tags, headers, texts, rating, bufferImgs, bufferCover } =
